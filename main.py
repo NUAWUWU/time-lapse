@@ -53,13 +53,16 @@ class VideoCaptureAsync:
         self.thread = None
 
 
-def compress_images_to_zip(folder_path, output_zip_path):
+async def on_new_date_start(folder_path, output_zip_path):
     with zipfile.ZipFile(output_zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        logging.debug(f'write {output_zip_path}')
         for root, dirs, files in os.walk(folder_path):
             for file in files:
                 if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
                     file_path = os.path.join(root, file)
                     zipf.write(file_path, os.path.relpath(file_path, folder_path))
+    logging.debug(f'delete dir {folder_path}')
+    shutil.rmtree(folder_path)
 
 
 async def main(video_cap):
@@ -85,13 +88,10 @@ async def main(video_cap):
             os.makedirs(new_dir_path)
             logging.debug(f'dir {new_dir_path} created')
 
-        # if current_date != start_date:
-            # old_dir_path = SAVE_DIR+start_date
-            # start_date = current_date
-            # archiving
-            # compress_images_to_zip(old_dir_path, old_dir_path+'.zip')
-            # delete old folder
-            # shutil.rmtree(old_dir_path)
+        if current_date != start_date:
+            old_dir_path = SAVE_DIR+start_date
+            start_date = current_date
+            asyncio.create_task(on_new_date_start(old_dir_path, old_dir_path+'.zip'))
 
         cv2.imwrite(f'{SAVE_DIR}{current_date}/{current_time}.jpg', frame)
         logging.info(f'{SAVE_DIR}{current_date}/{current_time}.jpg - Screenshot saved!')
