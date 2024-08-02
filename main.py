@@ -7,13 +7,13 @@ import os
 
 DELAY_SEC = 60
 SAVE_DIR = './images/'
-VIDEO_SRC = ''  #''
-# OUTPUT_IMG_SHAPE = (1920, 1080)
+VIDEO_SRC = ''
+OUTPUT_IMG_SHAPE = (1920, 1080) # (W, H) or None
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 class VideoCaptureAsync:
-    def __init__(self, sr):
+    def __init__(self, src):
         self.src = src
         self.cap = cv2.VideoCapture(self.src)
         if not self.cap.isOpened():
@@ -42,10 +42,7 @@ class VideoCaptureAsync:
                 time.sleep(10)
                 self.cap.open(self.src)
                 continue
-            if not self.q.full():
-                self.frame = frame
-            else:
-                time.sleep(0.1)  # Wait a bit if the queue is full
+            self.frame = frame
 
     def read(self):
         return self.frame
@@ -61,12 +58,20 @@ class VideoCaptureAsync:
 try:
     if not os.path.exists(SAVE_DIR): 
         os.makedirs(SAVE_DIR)
-    cap = VideoCaptureAsync(VIDEO_SRC)
-    cap.start()
+
+    run = True
+
+    try:
+        logging.info(f"Initializing video capture...")
+        video_capture = VideoCaptureAsync(VIDEO_SRC).start()
+    except RuntimeError as e:
+        logging.error(e)
+        run = False
     
-    while True:
-        frame = cap.read()
+    while run:
+        frame = video_capture.read()
         if frame is None:
+            logging.debug('frame is None')
             time.sleep(1)
             continue
 
@@ -74,15 +79,18 @@ try:
         current_time = date_time.strftime("%H-%M-%S")
         current_date = date_time.strftime("%d-%m-%Y")
 
-        # frame = cv2.resize(frame, OUTPUT_IMG_SHAPE)
+        if OUTPUT_IMG_SHAPE:
+            frame = cv2.resize(frame, OUTPUT_IMG_SHAPE)
 
         if not os.path.exists(SAVE_DIR+current_date): 
             os.makedirs(SAVE_DIR+current_date)
+            logging.debug(f'dir {SAVE_DIR+current_date} created')
 
         cv2.imwrite(f'{SAVE_DIR}{current_date}/{current_time}.jpg', frame)
-        print(f"{current_date}/{current_time}.jpg - Screenshot saved")
+        logging.info('Screenshot saved!')
 
         time.sleep(DELAY_SEC)
 except KeyboardInterrupt:
-    cap.release()
-    print('Interrupted by user. Exiting...')
+    logging.FATAL('Interrupted by user. Exiting...')
+finally:
+    video_capture.release()
