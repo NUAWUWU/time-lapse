@@ -1,15 +1,13 @@
 import cv2
 import time
-from datetime import datetime
+import zipfile
 import logging
 import threading
+import shutil
 import os
+import asyncio
 
-DELAY_SEC = 60
-SAVE_DIR = './images/'
-VIDEO_SRC = ''
-OUTPUT_IMG_SHAPE = (1920, 1080) # (W, H) or None
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+from datetime import datetime
 
 
 class VideoCaptureAsync:
@@ -55,42 +53,72 @@ class VideoCaptureAsync:
         self.thread = None
 
 
-try:
-    if not os.path.exists(SAVE_DIR): 
-        os.makedirs(SAVE_DIR)
+def compress_images_to_zip(folder_path, output_zip_path):
+    with zipfile.ZipFile(output_zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(folder_path):
+            for file in files:
+                if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                    file_path = os.path.join(root, file)
+                    zipf.write(file_path, os.path.relpath(file_path, folder_path))
 
-    run = True
 
-    try:
-        logging.info(f"Initializing video capture...")
-        video_capture = VideoCaptureAsync(VIDEO_SRC).start()
-    except RuntimeError as e:
-        logging.error(e)
-        run = False
-    
-    while run:
-        frame = video_capture.read()
+async def main(video_cap):
+    date_time = datetime.now()
+    start_date = date_time.strftime("%d-%m-%Y")
+
+    while True:
+        frame = video_cap.read()
         if frame is None:
             logging.debug('frame is None')
-            time.sleep(1)
+            await asyncio.sleep(1)
             continue
+
+        if OUTPUT_IMG_SHAPE:
+            frame = cv2.resize(frame, OUTPUT_IMG_SHAPE)
 
         date_time = datetime.now()
         current_time = date_time.strftime("%H-%M-%S")
         current_date = date_time.strftime("%d-%m-%Y")
 
-        if OUTPUT_IMG_SHAPE:
-            frame = cv2.resize(frame, OUTPUT_IMG_SHAPE)
+        new_dir_path = SAVE_DIR+current_date
+        if not os.path.exists(new_dir_path):
+            os.makedirs(new_dir_path)
+            logging.debug(f'dir {new_dir_path} created')
 
-        if not os.path.exists(SAVE_DIR+current_date): 
-            os.makedirs(SAVE_DIR+current_date)
-            logging.debug(f'dir {SAVE_DIR+current_date} created')
+        # if current_date != start_date:
+            # old_dir_path = SAVE_DIR+start_date
+            # start_date = current_date
+            # archiving
+            # compress_images_to_zip(old_dir_path, old_dir_path+'.zip')
+            # delete old folder
+            # shutil.rmtree(old_dir_path)
 
         cv2.imwrite(f'{SAVE_DIR}{current_date}/{current_time}.jpg', frame)
-        logging.info('Screenshot saved!')
+        logging.info(f'{SAVE_DIR}{current_date}/{current_time}.jpg - Screenshot saved!')
 
-        time.sleep(DELAY_SEC)
-except KeyboardInterrupt:
-    logging.FATAL('Interrupted by user. Exiting...')
-finally:
-    video_capture.release()
+        await asyncio.sleep(DELAY_SEC)
+
+
+if __name__ == "__main__":
+    DELAY_SEC = 60
+    SAVE_DIR = './images/'
+    VIDEO_SRC = 'http://192.168.1.156:8080/video'
+    OUTPUT_IMG_SHAPE = (1920, 1080) # (W, H) or None
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+    try:
+        logging.info(f"Initializing video capture...")
+        video_capture = VideoCaptureAsync(VIDEO_SRC).start()
+    except RuntimeError as e:
+        logging.error(e)
+        exit()
+    
+    if not os.path.exists(SAVE_DIR): 
+        os.makedirs(SAVE_DIR)
+    
+    try:
+        asyncio.run(main(video_capture))
+    except KeyboardInterrupt:
+        logging.critical('Shutdown initiated...')
+    finally:
+        video_capture.release()
+        logging.critical('Shutdown complete.')
