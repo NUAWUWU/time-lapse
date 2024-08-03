@@ -1,78 +1,71 @@
 import cv2
-import time
 import zipfile
-import logging
-import threading
 import shutil
 import os
 import asyncio
+import logging
 
 from datetime import datetime
+from video_capture import VideoCaptureAsync
+from email_sender import send_email
 
 
-class VideoCaptureAsync:
-    def __init__(self, src):
-        self.src = src
-        self.cap = cv2.VideoCapture(self.src)
-        if not self.cap.isOpened():
-            raise RuntimeError(f"Cam {self.src} not found")
-        self.frame = None
-        self.stop_event = threading.Event()
-        self.thread = None
+async def on_new_date_start(folder_path, output_zip_path, log_file_path):
+    logging.info(f'Starting to archive images from {folder_path} to {output_zip_path}.')
 
-    def start(self):
-        if self.thread is None:
-            self.thread = threading.Thread(target=self.update, args=())
-            self.thread.start()
-        return self
+    total_size = 0
+    image_count = 0
+    
+    try:
+        with zipfile.ZipFile(output_zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            logging.debug(f'Creating zip archive {output_zip_path}.')
+            for root, dirs, files in os.walk(folder_path):
+                for file in files:
+                    if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):   
+                        file_path = os.path.join(root, file)
+                        zipf.write(file_path, os.path.relpath(file_path, folder_path))
+                        file_size = os.path.getsize(file_path)
+                        total_size += file_size
+                        image_count += 1
+                        logging.debug(f'Added {file_path} to archive ({file_size / 1024:.2f} KB).')
 
-    def update(self):
-        while not self.stop_event.is_set():
-            if not self.cap.isOpened():
-                logging.warning(f'Camera {self.src} lost connection. Trying to reconnect in 10 seconds...')
-                time.sleep(10)
-                self.cap.open(self.src)
-                continue
-            ret, frame = self.cap.read()
-            if not ret:
-                logging.warning(f'Failed to read frame from camera {self.src}. Reconnecting in 10 seconds...')
-                self.cap.release()
-                time.sleep(10)
-                self.cap.open(self.src)
-                continue
-            self.frame = frame
+        total_size_mb = total_size / (1024 * 1024)
+        logging.info(f'Archive {output_zip_path} created successfully with {image_count} images, total size {total_size_mb:.2f} MB.')
+        
+        logging.debug(f'Deleting original folder {folder_path}.')
+        shutil.rmtree(folder_path)
+        logging.info(f'Folder {folder_path} deleted.')
 
-    def read(self):
-        return self.frame
+        logging.info(f'Sending email to {RECEIVER_EMAIL}.')
+        try:
+            send_email(SENDER_EMAIL,
+                    RECEIVER_EMAIL,
+                    subject=f'Daily Capture Summary: {image_count} Images Archived ({total_size_mb:.2f} MB)',
+                    body=f"""
+                    Image capture for the date {os.path.basename(folder_path)} has been successfully completed.
+                    A total of {image_count} images, with a combined size of {total_size_mb:.2f} MB, have been archived and attached to this email.
+                    Additionally, the log file for this day's activity is also attached. The log file contains detailed information about the capture process, including any errors or issues encountered.
 
-    def release(self):
-        self.stop_event.set()
-        if self.thread is not None:
-            self.thread.join()  # Ensure the thread has finished execution
-        self.cap.release()
-        self.thread = None
-
-
-async def on_new_date_start(folder_path, output_zip_path):
-    with zipfile.ZipFile(output_zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        logging.debug(f'write {output_zip_path}')
-        for root, dirs, files in os.walk(folder_path):
-            for file in files:
-                if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
-                    file_path = os.path.join(root, file)
-                    zipf.write(file_path, os.path.relpath(file_path, folder_path))
-    logging.debug(f'delete dir {folder_path}')
-    shutil.rmtree(folder_path)
+                    Send by Automated System
+                    """,
+                    password=SMTP_PASSWORD,
+                    file_paths=[output_zip_path, log_file_path])
+            logging.info(f'Email sent to {RECEIVER_EMAIL}.')
+        except Exception as e:
+            logging.error(f'Failed to send email: {e}')
+    except Exception as e:
+        logging.error(f'An error occurred during archiving or folder deletion: {e}')
 
 
 async def main(video_cap):
     date_time = datetime.now()
     start_date = date_time.strftime("%d-%m-%Y")
+    start_log_file_path = f'{LOGS_DIR}log_{start_date}.log'
 
     while True:
         frame = video_cap.read()
         if frame is None:
-            logging.debug('frame is None')
+            logging.debug('Frame is None')
             await asyncio.sleep(1)
             continue
 
@@ -86,12 +79,20 @@ async def main(video_cap):
         new_dir_path = SAVE_DIR+current_date
         if not os.path.exists(new_dir_path):
             os.makedirs(new_dir_path)
-            logging.debug(f'dir {new_dir_path} created')
+            logging.info(f'Dir {new_dir_path} created')
 
         if current_date != start_date:
             old_dir_path = SAVE_DIR+start_date
             start_date = current_date
-            asyncio.create_task(on_new_date_start(old_dir_path, old_dir_path+'.zip'))
+
+            logging.info(f'Ending the log for {old_dir_path}.')
+            logging.shutdown()
+            new_log_file_path = f'{LOGS_DIR}log_{start_date}.log'
+            logging.basicConfig(filename=new_log_file_path, level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+            logging.info(f'Starting new log file: {new_log_file_path}')
+
+            asyncio.create_task(on_new_date_start(old_dir_path, old_dir_path+'.zip', start_log_file_path))
+            start_log_file_path = new_log_file_path
 
         cv2.imwrite(f'{SAVE_DIR}{current_date}/{current_time}.jpg', frame)
         logging.info(f'{SAVE_DIR}{current_date}/{current_time}.jpg - Screenshot saved!')
@@ -100,11 +101,24 @@ async def main(video_cap):
 
 
 if __name__ == "__main__":
-    DELAY_SEC = 60
+    DELAY_SEC = 30
     SAVE_DIR = './images/'
-    VIDEO_SRC = 'http://192.168.1.156:8080/video'
+    LOGS_DIR = './logs/'
+    VIDEO_SRC = 'url'
     OUTPUT_IMG_SHAPE = (1920, 1080) # (W, H) or None
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+    SENDER_EMAIL = 'your_email@mail.ru'
+    RECEIVER_EMAIL = 'receiver@example.com'
+    SMTP_PASSWORD = 'SMTP_password'
+
+    if not os.path.exists(SAVE_DIR): 
+        os.makedirs(SAVE_DIR)
+    if not os.path.exists(LOGS_DIR):
+        os.makedirs(LOGS_DIR)
+
+    logging.basicConfig(filename=f'{LOGS_DIR}log_{datetime.now().strftime("%d-%m-%Y")}.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
+    print(f'logger setup complete. Logs save to {LOGS_DIR}')
+
     try:
         logging.info(f"Initializing video capture...")
         video_capture = VideoCaptureAsync(VIDEO_SRC).start()
@@ -112,13 +126,18 @@ if __name__ == "__main__":
         logging.error(e)
         exit()
     
-    if not os.path.exists(SAVE_DIR): 
-        os.makedirs(SAVE_DIR)
-    
     try:
         asyncio.run(main(video_capture))
     except KeyboardInterrupt:
         logging.critical('Shutdown initiated...')
     finally:
         video_capture.release()
+        u = input('Would you like to send a daily report for today? (Y/N)')
+        if u.lower() == 'n':
+            current_date_folder = SAVE_DIR+datetime.now().strftime("%d-%m-%Y")
+            logging.info(f'Ending the log for {current_date_folder}.')
+            logging.shutdown()
+            on_new_date_start(current_date_folder,
+                              current_date_folder+'zip',
+                              f'{LOGS_DIR}log_{current_date_folder}.log')
         logging.critical('Shutdown complete.')
