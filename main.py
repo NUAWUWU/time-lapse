@@ -10,6 +10,15 @@ from video_capture import VideoCaptureAsync
 from email_sender import send_email
 
 
+def setup_logger(log_file_path, level=logging.DEBUG):
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+
+    logging.basicConfig(filename=log_file_path,
+                        level=level,
+                        format='%(asctime)s - %(levelname)s - %(message)s')
+
+
 async def on_new_date_start(folder_path, output_zip_path, log_file_path):
     logging.info(f'Starting to archive images from {folder_path} to {output_zip_path}.')
 
@@ -62,6 +71,9 @@ async def main(video_cap):
     start_date = date_time.strftime("%d-%m-%Y")
     start_log_file_path = f'{LOGS_DIR}log_{start_date}.log'
 
+    setup_logger(start_log_file_path, LOGGER_LEVEL)
+    logging.info('Logger initialized.')
+
     while True:
         frame = video_cap.read()
         if frame is None:
@@ -76,22 +88,22 @@ async def main(video_cap):
         current_time = date_time.strftime("%H-%M-%S")
         current_date = date_time.strftime("%d-%m-%Y")
 
-        new_dir_path = SAVE_DIR+current_date
+        new_dir_path = SAVE_DIR + current_date
         if not os.path.exists(new_dir_path):
             os.makedirs(new_dir_path)
             logging.info(f'Dir {new_dir_path} created')
 
         if current_date != start_date:
-            old_dir_path = SAVE_DIR+start_date
+            old_dir_path = SAVE_DIR + start_date
             start_date = current_date
 
             logging.info(f'Ending the log for {old_dir_path}.')
             logging.shutdown()
             new_log_file_path = f'{LOGS_DIR}log_{start_date}.log'
-            logging.basicConfig(filename=new_log_file_path, level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+            setup_logger(new_log_file_path, LOGGER_LEVEL)
             logging.info(f'Starting new log file: {new_log_file_path}')
 
-            asyncio.create_task(on_new_date_start(old_dir_path, old_dir_path+'.zip', start_log_file_path))
+            asyncio.create_task(on_new_date_start(old_dir_path, old_dir_path + '.zip', start_log_file_path))
             start_log_file_path = new_log_file_path
 
         cv2.imwrite(f'{SAVE_DIR}{current_date}/{current_time}.jpg', frame)
@@ -100,44 +112,47 @@ async def main(video_cap):
         await asyncio.sleep(DELAY_SEC)
 
 
+
 if __name__ == "__main__":
-    DELAY_SEC = 30
+    DELAY_SEC = 10
     SAVE_DIR = './images/'
     LOGS_DIR = './logs/'
     VIDEO_SRC = 'url'
-    OUTPUT_IMG_SHAPE = (1920, 1080) # (W, H) or None
+    OUTPUT_IMG_SHAPE = (1920, 1080)  # (W, H) or None
     SENDER_EMAIL = 'your_email@mail.ru'
     RECEIVER_EMAIL = 'receiver@example.com'
     SMTP_PASSWORD = 'SMTP_password'
+    LOGGER_LEVEL = logging.DEBUG
 
-    if not os.path.exists(SAVE_DIR): 
+    if not os.path.exists(SAVE_DIR):
         os.makedirs(SAVE_DIR)
     if not os.path.exists(LOGS_DIR):
         os.makedirs(LOGS_DIR)
 
-    logging.basicConfig(filename=f'{LOGS_DIR}log_{datetime.now().strftime("%d-%m-%Y")}.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-
-    print(f'logger setup complete. Logs save to {LOGS_DIR}')
+    initial_log_file_path = f'{LOGS_DIR}log_{datetime.now().strftime("%d-%m-%Y")}.log'
+    setup_logger(initial_log_file_path, LOGGER_LEVEL)
+    print(f'Logger setup complete. Logs save to {LOGS_DIR}')
 
     try:
-        logging.info(f"Initializing video capture...")
+        logging.info("Initializing video capture...")
         video_capture = VideoCaptureAsync(VIDEO_SRC).start()
     except RuntimeError as e:
         logging.error(e)
         exit()
-    
+
     try:
         asyncio.run(main(video_capture))
     except KeyboardInterrupt:
         logging.critical('Shutdown initiated...')
     finally:
         video_capture.release()
-        u = input('Would you like to send a daily report for today? (Y/N)')
-        if u.lower() == 'n':
-            current_date_folder = SAVE_DIR+datetime.now().strftime("%d-%m-%Y")
-            logging.info(f'Ending the log for {current_date_folder}.')
+        u = input('Would you like to send a daily report for today? (Y/N) ')
+        if u.lower() == 'y':
+            logs_folder = f'{LOGS_DIR}log_{datetime.now().strftime("%d-%m-%Y")}.log'
+            images_folder = SAVE_DIR + datetime.now().strftime("%d-%m-%Y")
+            logging.info(f'Ending the log for {logs_folder}.')
             logging.shutdown()
-            on_new_date_start(current_date_folder,
-                              current_date_folder+'zip',
-                              f'{LOGS_DIR}log_{current_date_folder}.log')
+            asyncio.run(on_new_date_start(images_folder,
+                                          images_folder + '.zip',
+                                          f'{LOGS_DIR}log_{datetime.now().strftime("%d-%m-%Y")}.log'))
         logging.critical('Shutdown complete.')
