@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Просмотр изображений</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Сохранённые даты</h1>
+        <button onclick="window.location.href='{{ url_for('index') }}'">Вернуться назад</button>
+        <h2>Архивированные</h2>
+        <ul>
+            {% for date in archived_dates %}
+                <li><a href="{{ url_for('view_images', date=date) }}">{{ date }}</a></li>
+            {% endfor %}
+        </ul>
+        <h2>Не архивированные</h2>
+        <ul>
+            {% for date in dates %}
+                <li><a href="{{ url_for('view_images', date=date) }}">{{ date }}</a></li>
+            {% endfor %}
+        </ul>
+    </div>
+</body>
+</html>

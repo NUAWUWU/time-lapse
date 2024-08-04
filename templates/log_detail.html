@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Логи {{ date }}</title>
+</head>
+<body>
+    <div class="container logs">
+        <h1>Логи за {{ date }}</h1>
+        <button onclick="window.location.href='{{ url_for('logs') }}'">Вернуться назад</button>
+        <pre class="log-content">{{ log_content }}</pre>
+    </div>
+</body>
+</html>

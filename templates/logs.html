@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Просмотр логов</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Доступные логи</h1>
+        <button onclick="window.location.href='{{ url_for('index') }}'">Вернуться назад</button>
+        <ul>
+            {% for log in logs %}
+                <li><a href="{{ url_for('log_detail', date=log) }}">{{ log }}</a></li>
+            {% endfor %}
+        </ul>
+    </div>
+</body>
+</html>

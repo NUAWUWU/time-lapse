@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Изображения за {{ date }}</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Изображения за {{ date }}</h1>
+        
+        {% if archived %}
+            <div class="warning">
+                <p>Этот архив может содержать много файлов, разархивирование может занять некоторое время.</p>
+                <form method="POST">
+                    <button type="submit" name="unzip" value="yes">Да, разархивировать</button>
+                    <button type="button" onclick="window.location.href='{{ url_for('images') }}'">Нет, вернуться назад</button>
+                </form>
+            </div>
+        {% else %}
+            <button onclick="window.location.href='{{ url_for('images') }}'">Вернуться назад</button>
+            <div class="image-gallery">
+                {% for image in images %}
+                    <div class="image-item">
+                        <img src="{{ url_for('image_file', date=date, filename=image) }}" alt="{{ image }}">
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
