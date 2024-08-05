@@ -1,16 +1,17 @@
-from flask import Flask, render_template, send_from_directory, request, redirect, url_for, flash
-from utils.email_sender import send_email
+from flask import Flask, render_template, send_from_directory, request, redirect, url_for
 from markupsafe import Markup
 from datetime import datetime
 import os
 import re
 import zipfile
 
+from config import SAVE_DIR, LOGS_DIR
+
 app = Flask(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-IMAGES_DIR = os.path.join(BASE_DIR, 'images')
-LOGS_DIR = os.path.join(BASE_DIR, 'logs')
+FULL_SAVE_DIR = os.path.join(BASE_DIR, SAVE_DIR)
+FULL_LOGS_DIR = os.path.join(BASE_DIR, LOGS_DIR)
 
 @app.route('/')
 def index():
@@ -23,8 +24,8 @@ def images():
 
     date_pattern = re.compile(r'(\d{2})-(\d{2})-(\d{4})')
 
-    for item in os.listdir(IMAGES_DIR):
-        item_path = os.path.join(IMAGES_DIR, item)
+    for item in os.listdir(FULL_SAVE_DIR):
+        item_path = os.path.join(FULL_SAVE_DIR, item)
         match = date_pattern.match(item)
 
         if match:
@@ -44,7 +45,7 @@ def images():
 
 @app.route('/images/<date>', methods=['GET', 'POST'])
 def view_images(date):
-    date_dir = os.path.join(IMAGES_DIR, date)
+    date_dir = os.path.join(FULL_SAVE_DIR, date)
     images = []
 
     if request.method == 'POST':
@@ -61,6 +62,17 @@ def view_images(date):
         images = zipfile.ZipFile(date_dir + '.zip', 'r').namelist()
 
     return render_template('view_images.html', date=date, images=images, archived=not os.path.isdir(date_dir))
+
+@app.route('/images/<date>/<filename>')
+def image_file(date, filename):
+    date_dir = os.path.join(FULL_SAVE_DIR, date)
+    if os.path.isdir(date_dir):
+        return send_from_directory(date_dir, filename)
+    elif zipfile.is_zipfile(date_dir + '.zip'):
+        with zipfile.ZipFile(date_dir + '.zip', 'r') as zip_ref:
+            file_data = zip_ref.read(filename)
+            response = app.response_class(file_data, mimetype='image/jpeg')
+            return response
 
 @app.route('/logs')
 def logs():
@@ -95,17 +107,6 @@ def log_detail(date):
 @app.route('/updates')
 def updates():
     return "Проверка обновлений (функция в разработке)"
-
-@app.route('/images/<date>/<filename>')
-def image_file(date, filename):
-    date_dir = os.path.join(IMAGES_DIR, date)
-    if os.path.isdir(date_dir):
-        return send_from_directory(date_dir, filename)
-    elif zipfile.is_zipfile(date_dir + '.zip'):
-        with zipfile.ZipFile(date_dir + '.zip', 'r') as zip_ref:
-            file_data = zip_ref.read(filename)
-            response = app.response_class(file_data, mimetype='image/jpeg')
-            return response
 
 if __name__ == '__main__':
     app.run(debug=True)
