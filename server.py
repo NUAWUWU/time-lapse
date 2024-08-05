@@ -4,8 +4,12 @@ from datetime import datetime
 import os
 import re
 import zipfile
+import asyncio
+import threading
+import logging
 
-from config import SAVE_DIR, LOGS_DIR
+from config import *
+from timelapse import TimeLapse
 
 app = Flask(__name__)
 
@@ -13,9 +17,22 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FULL_SAVE_DIR = os.path.join(BASE_DIR, SAVE_DIR)
 FULL_LOGS_DIR = os.path.join(BASE_DIR, LOGS_DIR)
 
+timelapse = TimeLapse(video_src=VIDEO_SRC,
+                      save_dir=SAVE_DIR,
+                      sender_email=SENDER_EMAIL,
+                      smtp_password=SMTP_PASSWORD,
+                      receiver_email=RECEIVER_EMAIL,
+                      logs_dir=LOGS_DIR,
+                      output_img_shape=OUTPUT_IMG_SHAPE,
+                      delay_sec=DELAY_SEC)
+
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
 @app.route('/')
 def index():
     return render_template('index.html')
+
 
 @app.route('/images')
 def images():
@@ -74,6 +91,7 @@ def image_file(date, filename):
             response = app.response_class(file_data, mimetype='image/jpeg')
             return response
 
+
 @app.route('/logs')
 def logs():
     logs = []
@@ -100,9 +118,25 @@ def log_detail(date):
     log_content = re.sub(r'(\bINFO\b)', r'<span class="INFO">\1</span>', log_content)
     log_content = re.sub(r'(\bDEBUG\b)', r'<span class="DEBUG">\1</span>', log_content)
     log_content = re.sub(r'(\bERROR\b)', r'<span class="ERROR">\1</span>', log_content)
+    log_content = re.sub(r'(\bWARNING\b)', r'<span class="WARNING">\1</span>', log_content)
     log_content = re.sub(r'(\bCRITICAL\b)', r'<span class="CRITICAL">\1</span>', log_content)
 
     return render_template('log_detail.html', log_content=Markup(log_content), date=date)
+
+
+@app.route('/config')
+def config():
+    return render_template('config.html', is_running=timelapse.is_running)
+
+@app.route('/toggle-timelapse', methods=['POST'])
+def toggle_timelapse():
+    if timelapse.is_running:
+        timelapse.stop()
+    else:
+        thread = threading.Thread(target=asyncio.run, args=(timelapse.start(),))
+        thread.start()
+    return redirect(url_for('config'))
+
 
 @app.route('/updates')
 def updates():

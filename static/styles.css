@@ -70,12 +70,16 @@ pre.log-content .DEBUG {
     color: #00ffff;
 }
 
+pre.log-content .WARNING {
+    color: #ff8000;
+}
+
 pre.log-content .ERROR {
-    color: #ff6a00;
+    color: #ff1100;
 }
 
 pre.log-content .CRITICAL {
-    color: #ff0000;
+    color: #600000;
 }
 
 .image-gallery {
@@ -119,4 +123,12 @@ pre.log-content .CRITICAL {
 
 .warning button:hover {
     background-color: #d32f2f;
+}
+
+.online {
+    color: #00ff00;
+}
+
+.offline {
+    color: #ff0000;
 }

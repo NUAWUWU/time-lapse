@@ -22,8 +22,9 @@ class TimeLapse:
         self.current_date = datetime.now().strftime("%d-%m-%Y")
         self.log_file_path = f'{logs_dir}log_{self.current_date}.log'
         self.is_running = False
+        if not os.path.exists(self.logs_dir):
+            os.makedirs(self.logs_dir)
         self.setup_logger(self.log_file_path, logging.DEBUG)
-        logging.info('Logger setup complete')
 
     def setup_logger(self, log_file_path, level=logging.DEBUG):
         logging.info(f'Logger save file has been changed, new file: {log_file_path}')
@@ -121,10 +122,11 @@ class TimeLapse:
         if not os.path.exists(self.logs_dir):
             os.makedirs(self.logs_dir)
 
+        self.is_running = True
+
         try:
             logging.info("Initializing video capture...")
             self.video_cap = VideoCaptureAsync(self.video_src).start()
-            self.is_running = True
             await self.capture_images()
         except RuntimeError as e:
             logging.error(e)
