@@ -6,9 +6,9 @@ import asyncio
 import logging
 
 from datetime import datetime
-from video_capture import VideoCaptureAsync
-from email_sender import send_email
-
+from utils.video_capture import VideoCaptureAsync
+from utils.email_sender import send_email
+from config import *
 
 def setup_logger(log_file_path, level=logging.DEBUG):
     for handler in logging.root.handlers[:]:
@@ -71,7 +71,7 @@ async def main(video_cap):
     start_date = date_time.strftime("%d-%m-%Y")
     start_log_file_path = f'{LOGS_DIR}log_{start_date}.log'
 
-    setup_logger(start_log_file_path, LOGGER_LEVEL)
+    setup_logger(start_log_file_path, logging.DEBUG)
     logging.info('Logger initialized.')
 
     while True:
@@ -100,7 +100,7 @@ async def main(video_cap):
             logging.info(f'Ending the log for {old_dir_path}.')
             logging.shutdown()
             new_log_file_path = f'{LOGS_DIR}log_{start_date}.log'
-            setup_logger(new_log_file_path, LOGGER_LEVEL)
+            setup_logger(new_log_file_path, logging.DEBUG)
             logging.info(f'Starting new log file: {new_log_file_path}')
 
             asyncio.create_task(on_new_date_start(old_dir_path, old_dir_path + '.zip', start_log_file_path))
@@ -114,15 +114,6 @@ async def main(video_cap):
 
 
 if __name__ == "__main__":
-    DELAY_SEC = 10
-    SAVE_DIR = './images/'
-    LOGS_DIR = './logs/'
-    VIDEO_SRC = 'url'
-    OUTPUT_IMG_SHAPE = (1920, 1080)  # (W, H) or None
-    SENDER_EMAIL = 'your_email@mail.ru'
-    RECEIVER_EMAIL = 'receiver@example.com'
-    SMTP_PASSWORD = 'SMTP_password'
-    LOGGER_LEVEL = logging.DEBUG
 
     if not os.path.exists(SAVE_DIR):
         os.makedirs(SAVE_DIR)
@@ -130,7 +121,7 @@ if __name__ == "__main__":
         os.makedirs(LOGS_DIR)
 
     initial_log_file_path = f'{LOGS_DIR}log_{datetime.now().strftime("%d-%m-%Y")}.log'
-    setup_logger(initial_log_file_path, LOGGER_LEVEL)
+    setup_logger(initial_log_file_path, logging.DEBUG)
     print(f'Logger setup complete. Logs save to {LOGS_DIR}')
 
     try:

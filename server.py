@@ -1,5 +1,7 @@
 from flask import Flask, render_template, send_from_directory, request, redirect, url_for, flash
+from utils.email_sender import send_email
 from markupsafe import Markup
+from datetime import datetime
 import os
 import re
 import zipfile
@@ -18,13 +20,27 @@ def index():
 def images():
     dates = []
     archived_dates = []
+
+    date_pattern = re.compile(r'(\d{2})-(\d{2})-(\d{4})')
+
     for item in os.listdir(IMAGES_DIR):
         item_path = os.path.join(IMAGES_DIR, item)
-        if os.path.isdir(item_path):
-            dates.append(item)
-        elif zipfile.is_zipfile(item_path):
-            archived_dates.append(item.replace('.zip', ''))
-    return render_template('images.html', dates=dates, archived_dates=archived_dates)
+        match = date_pattern.match(item)
+
+        if match:
+            day, month, year = match.groups()
+            item_date = datetime(int(year), int(month), int(day))
+            
+            if os.path.isdir(item_path):
+                dates.append((item_date, item))
+            elif zipfile.is_zipfile(item_path):
+                archived_dates.append((item_date, item.replace('.zip', '')))
+
+    dates.sort(reverse=False, key=lambda x: x[0])
+    archived_dates.sort(reverse=False, key=lambda x: x[0])
+    sorted_dates = [date[1] for date in dates]
+    sorted_archived_dates = [archived_date[1] for archived_date in archived_dates]
+    return render_template('images.html', dates=sorted_dates, archived_dates=sorted_archived_dates)
 
 @app.route('/images/<date>', methods=['GET', 'POST'])
 def view_images(date):
@@ -48,8 +64,20 @@ def view_images(date):
 
 @app.route('/logs')
 def logs():
-    logs = [f.replace('.log', '') for f in os.listdir(LOGS_DIR) if f.endswith('.log')]
-    return render_template('logs.html', logs=logs)
+    logs = []
+    log_files = [f for f in os.listdir(LOGS_DIR) if f.endswith('.log')]
+    
+    date_pattern = re.compile(r'log_(\d{2})-(\d{2})-(\d{4})\.log')
+    
+    for log_file in log_files:
+        match = date_pattern.match(log_file)
+        if match:
+            day, month, year = match.groups()
+            log_date = datetime(int(year), int(month), int(day))
+            logs.append((log_date, log_file.replace('.log', '')))
+    logs.sort(reverse=False, key=lambda x: x[0])
+    log_names = [log[1] for log in logs]
+    return render_template('logs.html', logs=log_names)
 
 @app.route('/log/<date>')
 def log_detail(date):
