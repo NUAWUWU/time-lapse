@@ -7,6 +7,7 @@ import zipfile
 import asyncio
 import threading
 import logging
+import psutil
 
 from config import *
 from timelapse import TimeLapse
@@ -54,8 +55,9 @@ def images():
             elif zipfile.is_zipfile(item_path):
                 archived_dates.append((item_date, item.replace('.zip', '')))
 
-    dates.sort(reverse=False, key=lambda x: x[0])
-    archived_dates.sort(reverse=False, key=lambda x: x[0])
+    dates.sort(key=lambda x: x[0])
+    archived_dates.sort(key=lambda x: x[0])
+
     sorted_dates = [date[1] for date in dates]
     sorted_archived_dates = [archived_date[1] for archived_date in archived_dates]
     return render_template('images.html', dates=sorted_dates, archived_dates=sorted_archived_dates)
@@ -77,7 +79,7 @@ def view_images(date):
         images = os.listdir(date_dir)
     elif zipfile.is_zipfile(date_dir + '.zip'):
         images = zipfile.ZipFile(date_dir + '.zip', 'r').namelist()
-
+    images.sort()
     return render_template('view_images.html', date=date, images=images, archived=not os.path.isdir(date_dir))
 
 @app.route('/images/<date>/<filename>')
@@ -124,9 +126,47 @@ def log_detail(date):
     return render_template('log_detail.html', log_content=Markup(log_content), date=date)
 
 
-@app.route('/config')
+@app.route('/config', methods=['GET', 'POST'])
 def config():
-    return render_template('config.html', is_running=timelapse.is_running)
+    if request.method == 'POST' and not timelapse.is_running:
+        new_config = {
+            "DELAY_SEC": int(request.form['DELAY_SEC']),
+            "SAVE_DIR": request.form['SAVE_DIR'],
+            "LOGS_DIR": request.form['LOGS_DIR'],
+            "VIDEO_SRC": request.form['VIDEO_SRC'],
+            "OUTPUT_IMG_SHAPE": tuple(map(int, request.form['OUTPUT_IMG_SHAPE'].split(','))) if request.form['OUTPUT_IMG_SHAPE'] else None,
+            "SENDER_EMAIL": request.form['SENDER_EMAIL'],
+            "RECEIVER_EMAIL": request.form['RECEIVER_EMAIL'],
+            "SMTP_PASSWORD": request.form['SMTP_PASSWORD'],
+            "SERVER_PORT": int(request.form['SERVER_PORT']),
+        }
+        with open('config.py', 'w') as config_file:
+            for key, value in new_config.items():
+                config_file.write(f"{key} = {repr(value)}\n")
+        return redirect(url_for('config'))
+
+    current_config = {
+        "DELAY_SEC": DELAY_SEC,
+        "SAVE_DIR": SAVE_DIR,
+        "LOGS_DIR": LOGS_DIR,
+        "VIDEO_SRC": VIDEO_SRC,
+        "OUTPUT_IMG_SHAPE": OUTPUT_IMG_SHAPE,
+        "SENDER_EMAIL": SENDER_EMAIL,
+        "RECEIVER_EMAIL": RECEIVER_EMAIL,
+        "SMTP_PASSWORD": SMTP_PASSWORD,
+        "SERVER_PORT": SERVER_PORT,
+    }
+
+    memory_info = psutil.virtual_memory()
+    memory_used_mb = memory_info.used / (1024 * 1024)
+    memory_usage_percent = memory_info.percent
+    cpu_usage = psutil.cpu_percent(interval=1)
+
+    return render_template('config.html', is_running=timelapse.is_running,
+                           config=current_config,
+                           memory_used_mb=memory_used_mb,
+                           memory_usage_percent=memory_usage_percent,
+                           cpu_usage=cpu_usage)
 
 @app.route('/toggle-timelapse', methods=['POST'])
 def toggle_timelapse():
@@ -144,4 +184,4 @@ def updates():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=SERVER_PORT)
+    app.run(host='0.0.0.0', port=SERVER_PORT, debug=True)

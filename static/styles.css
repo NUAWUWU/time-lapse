@@ -2,13 +2,18 @@ body {
     background-color: #121212;
     color: #ffffff;
     font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
 }
 
 .container {
     max-width: 800px;
-    margin: 0 auto;
+    margin: 40px auto;
     padding: 20px;
     text-align: center;
+    background-color: #1e1e1e;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 .logs {
@@ -17,7 +22,7 @@ body {
 
 h1 {
     color: #bb86fc;
-    text-align: center;
+    margin-bottom: 20px;
 }
 
 a {
@@ -45,13 +50,23 @@ button {
     padding: 10px 20px;
     cursor: pointer;
     margin-bottom: 20px;
+    display: block;
+    width: 100%;
+    max-width: 300px;
     margin-left: auto;
     margin-right: auto;
-    display: block;
+    border-radius: 5px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
 button:hover {
     background-color: #9a67ea;
+}
+
+button[type="button"] {
+    margin-top: 10px;
+    background-color: #03dac6;
+    color: #000;
 }
 
 pre.log-content {
@@ -125,10 +140,56 @@ pre.log-content .CRITICAL {
     background-color: #d32f2f;
 }
 
-.online {
-    color: #00ff00;
+.resource-usage {
+    margin: 20px 0;
+    padding: 10px;
+    background-color: #2e2e2e;
+    border-radius: 5px;
+    text-align: left;
 }
 
-.offline {
+.resource-usage p {
+    margin: 5px 0;
+}
+
+
+form {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    margin: 10px 0 5px;
+    text-align: left;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"] {
+    width: calc(100% - 22px);
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #666;
+    border-radius: 5px;
+    background-color: #2e2e2e;
+    color: #ffffff;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus {
+    border-color: #bb86fc;
+    outline: none;
+}
+
+p.online {
+    color: #00ff00;
+    font-weight: bold;
+}
+
+p.offline {
     color: #ff0000;
+    font-weight: bold;
 }

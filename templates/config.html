@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <title>Просмотр изображений</title>
+    <title>Конфигурация</title>
 </head>
 <body>
     <div class="container">
@@ -18,6 +18,56 @@
                 {{ 'Остановить' if is_running else 'Запустить' }}
             </button>
         </form>
+
+        <div class="resource-usage">
+            <p>Использование памяти: {{ memory_used_mb|round(2) }} MB ({{ memory_usage_percent }}%)</p>
+            <p>Использование процессора: {{ cpu_usage }}%</p>
+        </div>
+
+        {% if not is_running %}
+        <form action="{{ url_for('config') }}" method="POST">
+            <label for="DELAY_SEC">Задержка:</label>
+            <input type="number" id="DELAY_SEC" name="DELAY_SEC" value="{{ config.DELAY_SEC }}" required>
+            
+            <label for="SAVE_DIR">Папка для изображений:</label>
+            <input type="text" id="SAVE_DIR" name="SAVE_DIR" value="{{ config.SAVE_DIR }}" required>
+            
+            <label for="LOGS_DIR">Папка для логов:</label>
+            <input type="text" id="LOGS_DIR" name="LOGS_DIR" value="{{ config.LOGS_DIR }}" required>
+            
+            <label for="VIDEO_SRC">URL Камеры:</label>
+            <input type="text" id="VIDEO_SRC" name="VIDEO_SRC" value="{{ config.VIDEO_SRC }}" required>
+            
+            <label for="OUTPUT_IMG_SHAPE">Сохраняемые размер (W,H):</label>
+            <input type="text" id="OUTPUT_IMG_SHAPE" name="OUTPUT_IMG_SHAPE" value="{{ config.OUTPUT_IMG_SHAPE|join(',') }}">
+            
+            <label for="SENDER_EMAIL">Почта отправителя:</label>
+            <input type="email" id="SENDER_EMAIL" name="SENDER_EMAIL" value="{{ config.SENDER_EMAIL }}" required>
+            
+            <label for="RECEIVER_EMAIL">Почта получателя:</label>
+            <input type="email" id="RECEIVER_EMAIL" name="RECEIVER_EMAIL" value="{{ config.RECEIVER_EMAIL }}" required>
+            
+            <label for="SMTP_PASSWORD">SMTP Пароль:</label>
+            <input type="password" id="SMTP_PASSWORD" name="SMTP_PASSWORD" value="{{ config.SMTP_PASSWORD }}" required>
+            <button type="button" onclick="togglePassword()">Показать пароль</button>
+            
+            <label for="SERVER_PORT">Порт сервера (изменится после перезагрузки):</label>
+            <input type="number" id="SERVER_PORT" name="SERVER_PORT" value="{{ config.SERVER_PORT }}" required>
+
+            <button type="submit">Сохранить изменения</button>
+        </form>
+        {% endif %}
     </div>
+
+    <script>
+        function togglePassword() {
+            var passwordField = document.getElementById('SMTP_PASSWORD');
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+            } else {
+                passwordField.type = 'password';
+            }
+        }
+    </script>
 </body>
 </html>
