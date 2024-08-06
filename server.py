@@ -142,5 +142,6 @@ def toggle_timelapse():
 def updates():
     return "Проверка обновлений (функция в разработке)"
 
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=SERVER_PORT)

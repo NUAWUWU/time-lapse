@@ -14,7 +14,7 @@
             {{ 'Онлайн' if is_running else 'Оффлайн' }}
         </p>
         <form action="{{ url_for('toggle_timelapse') }}" method="POST">
-            <button class="btn" type="submit">
+            <button type="submit">
                 {{ 'Остановить' if is_running else 'Запустить' }}
             </button>
         </form>

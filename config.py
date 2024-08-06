@@ -6,3 +6,4 @@ OUTPUT_IMG_SHAPE = (1920, 1080)  # (W, H) or None
 SENDER_EMAIL = 'your_email@mail.ru'
 RECEIVER_EMAIL = 'receiver@example.com'
 SMTP_PASSWORD = 'SMTP_password'
+SERVER_PORT = 8000
