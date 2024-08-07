@@ -94,7 +94,8 @@ pre.log-content .ERROR {
 }
 
 pre.log-content .CRITICAL {
-    color: #600000;
+    color: #a40000;
+    text-decoration: underline #a40000;
 }
 
 .image-gallery {

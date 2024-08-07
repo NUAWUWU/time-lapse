@@ -14,10 +14,6 @@ from timelapse import TimeLapse
 
 app = Flask(__name__)
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FULL_SAVE_DIR = os.path.join(BASE_DIR, SAVE_DIR)
-FULL_LOGS_DIR = os.path.join(BASE_DIR, LOGS_DIR)
-
 timelapse = TimeLapse(video_src=VIDEO_SRC,
                       save_dir=SAVE_DIR,
                       sender_email=SENDER_EMAIL,
@@ -42,8 +38,8 @@ def images():
 
     date_pattern = re.compile(r'(\d{2})-(\d{2})-(\d{4})')
 
-    for item in os.listdir(FULL_SAVE_DIR):
-        item_path = os.path.join(FULL_SAVE_DIR, item)
+    for item in os.listdir(timelapse.save_dir):
+        item_path = os.path.join(timelapse.save_dir, item)
         match = date_pattern.match(item)
 
         if match:
@@ -64,7 +60,7 @@ def images():
 
 @app.route('/images/<date>', methods=['GET', 'POST'])
 def view_images(date):
-    date_dir = os.path.join(FULL_SAVE_DIR, date)
+    date_dir = os.path.join(timelapse.save_dir, date)
     images = []
 
     if request.method == 'POST':
@@ -84,7 +80,7 @@ def view_images(date):
 
 @app.route('/images/<date>/<filename>')
 def image_file(date, filename):
-    date_dir = os.path.join(FULL_SAVE_DIR, date)
+    date_dir = os.path.join(timelapse.save_dir, date)
     if os.path.isdir(date_dir):
         return send_from_directory(date_dir, filename)
     elif zipfile.is_zipfile(date_dir + '.zip'):
@@ -97,7 +93,7 @@ def image_file(date, filename):
 @app.route('/logs')
 def logs():
     logs = []
-    log_files = [f for f in os.listdir(LOGS_DIR) if f.endswith('.log')]
+    log_files = [f for f in os.listdir(timelapse.logs_dir) if f.endswith('.log')]
     
     date_pattern = re.compile(r'log_(\d{2})-(\d{2})-(\d{4})\.log')
     
@@ -113,7 +109,7 @@ def logs():
 
 @app.route('/log/<date>')
 def log_detail(date):
-    log_file = os.path.join(LOGS_DIR, f"{date}.log")
+    log_file = os.path.join(timelapse.logs_dir, f"{date}.log")
     with open(log_file, 'r') as file:
         log_content = file.read()
 
@@ -129,15 +125,24 @@ def log_detail(date):
 @app.route('/config', methods=['GET', 'POST'])
 def config():
     if request.method == 'POST' and not timelapse.is_running:
+        timelapse.delay_sec = int(request.form['DELAY_SEC'])
+        timelapse.save_dir = request.form['SAVE_DIR']
+        timelapse.logs_dir = request.form['LOGS_DIR']
+        timelapse.video_src = request.form['VIDEO_SRC']
+        timelapse.output_img_shape = tuple(map(int, request.form['OUTPUT_IMG_SHAPE'].split(','))) if request.form['OUTPUT_IMG_SHAPE'] else None
+        timelapse.sender_email = request.form['SENDER_EMAIL']
+        timelapse.receiver_email = request.form['RECEIVER_EMAIL']
+        timelapse.smtp_password = request.form['SMTP_PASSWORD']
+
         new_config = {
-            "DELAY_SEC": int(request.form['DELAY_SEC']),
-            "SAVE_DIR": request.form['SAVE_DIR'],
-            "LOGS_DIR": request.form['LOGS_DIR'],
-            "VIDEO_SRC": request.form['VIDEO_SRC'],
-            "OUTPUT_IMG_SHAPE": tuple(map(int, request.form['OUTPUT_IMG_SHAPE'].split(','))) if request.form['OUTPUT_IMG_SHAPE'] else None,
-            "SENDER_EMAIL": request.form['SENDER_EMAIL'],
-            "RECEIVER_EMAIL": request.form['RECEIVER_EMAIL'],
-            "SMTP_PASSWORD": request.form['SMTP_PASSWORD'],
+            "DELAY_SEC": timelapse.delay_sec,
+            "SAVE_DIR": timelapse.save_dir,
+            "LOGS_DIR": timelapse.logs_dir,
+            "VIDEO_SRC": timelapse.video_src,
+            "OUTPUT_IMG_SHAPE": timelapse.output_img_shape,
+            "SENDER_EMAIL": timelapse.sender_email,
+            "RECEIVER_EMAIL": timelapse.receiver_email,
+            "SMTP_PASSWORD": timelapse.smtp_password,
             "SERVER_PORT": int(request.form['SERVER_PORT']),
         }
         with open('config.py', 'w') as config_file:
@@ -146,14 +151,14 @@ def config():
         return redirect(url_for('config'))
 
     current_config = {
-        "DELAY_SEC": DELAY_SEC,
-        "SAVE_DIR": SAVE_DIR,
-        "LOGS_DIR": LOGS_DIR,
-        "VIDEO_SRC": VIDEO_SRC,
-        "OUTPUT_IMG_SHAPE": OUTPUT_IMG_SHAPE,
-        "SENDER_EMAIL": SENDER_EMAIL,
-        "RECEIVER_EMAIL": RECEIVER_EMAIL,
-        "SMTP_PASSWORD": SMTP_PASSWORD,
+        "DELAY_SEC": timelapse.delay_sec,
+        "SAVE_DIR": timelapse.save_dir,
+        "LOGS_DIR": timelapse.logs_dir,
+        "VIDEO_SRC": timelapse.video_src,
+        "OUTPUT_IMG_SHAPE": timelapse.output_img_shape,
+        "SENDER_EMAIL": timelapse.sender_email,
+        "RECEIVER_EMAIL": timelapse.receiver_email,
+        "SMTP_PASSWORD": timelapse.smtp_password,
         "SERVER_PORT": SERVER_PORT,
     }
 
@@ -184,4 +189,14 @@ def updates():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=SERVER_PORT, debug=True)
+    logging.info(f'Start server: 0.0.0.0:{SERVER_PORT}')
+
+    app.run(host='0.0.0.0', port=SERVER_PORT, debug=False)
+
+    logging.critical('Shutdown server...')
+    timelapse.stop()
+    u = input('Would you like to send a daily report for today? (Y/N) ')
+    if u.lower() == 'y':
+        logging.info('Send daily report initialized')
+        timelapse.send_daily_report()
+    logging.critical('Shutdown complete.')

@@ -24,6 +24,8 @@ class TimeLapse:
         self.is_running = False
         if not os.path.exists(self.logs_dir):
             os.makedirs(self.logs_dir)
+        if not os.path.exists(self.save_dir):
+            os.makedirs(self.save_dir)
         self.setup_logger(self.log_file_path, logging.DEBUG)
 
     def setup_logger(self, log_file_path, level=logging.DEBUG):
@@ -60,7 +62,7 @@ class TimeLapse:
             shutil.rmtree(folder_path)
             logging.info(f'Folder {folder_path} deleted.')
 
-            logging.info(f'Sending email to {RECEIVER_EMAIL}.')
+            logging.info(f'Sending email to {self.receiver_email}.')
             try:
                 send_email(self.sender_email,
                         self.receiver_email,
@@ -164,5 +166,6 @@ if __name__ == "__main__":
         timelapse.stop()
         u = input('Would you like to send a daily report for today? (Y/N) ')
         if u.lower() == 'y':
+            logging.info('Send daily report initialized')
             timelapse.send_daily_report()
         logging.critical('Shutdown complete.')
