@@ -1,7 +1,9 @@
 import cv2
 import time
 import threading
-import logging
+
+from logger_config import logger
+
 
 class VideoCaptureAsync:
     def __init__(self, src):
@@ -22,13 +24,13 @@ class VideoCaptureAsync:
     def update(self):
         while not self.stop_event.is_set():
             if not self.cap.isOpened():
-                logging.warning(f'Camera {self.src} lost connection. Trying to reconnect in 10 seconds...')
+                logger.warning(f'Camera {self.src} lost connection. Trying to reconnect in 10 seconds...')
                 time.sleep(10)
                 self.cap.open(self.src)
                 continue
             ret, frame = self.cap.read()
             if not ret:
-                logging.warning(f'Failed to read frame from camera {self.src}. Reconnecting in 10 seconds...')
+                logger.warning(f'Failed to read frame from camera {self.src}. Reconnecting in 10 seconds...')
                 self.cap.release()
                 time.sleep(10)
                 self.cap.open(self.src)
@@ -44,3 +46,6 @@ class VideoCaptureAsync:
             self.thread.join()  # Ensure the thread has finished execution
         self.cap.release()
         self.thread = None
+
+    def __del__(self):
+        self.release()

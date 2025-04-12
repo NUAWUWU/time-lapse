@@ -1,0 +1,22 @@
+{
+    "timelapse_config": {
+        "CONSOLE_LOG_LEVEL": "DEBUG",
+        "FILE_LOG_LEVEL": "DEBUG",
+        "LOG_DIR": "logs/",
+        "SAVE_DIR": "images/",
+        "VIDEO_SRC": "http://192.168.0.233:8080/video",
+        "DELAY_SEC": 5,
+        "OUTPUT_IMG_SHAPE": null,
+        "DETAILED_ERROR_REPORT": true
+    },
+    "email_config": {
+        "SENDER_EMAIL": "nuawuwu@mail.ru",
+        "RECEIVER_EMAILS": [
+            "oleg.sharovski@mail.ru"
+        ],
+        "SMTP_PASSWORD": "FMLJc0DDK6WiY9ieh26L"
+    },
+    "server_config": {
+        "SERVER_PORT": 8000
+    }
+}
