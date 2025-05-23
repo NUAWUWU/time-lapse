@@ -171,7 +171,9 @@ class TimeLapse:
         else:
             date = os.path.basename(item)
             log_file_path = os.path.join(self.logs_dir, date + '.log')
-            total_size_mb, image_count = archive_images(item, item + '.zip', delete_folder=True)
+            total_size_mb, image_count, resp = archive_images(item, item + '.zip', delete_folder=True)
+            if resp == False:
+                return
             item += '.zip'
 
         if not os.path.exists(log_file_path):

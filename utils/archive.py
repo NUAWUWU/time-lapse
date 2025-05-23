@@ -32,6 +32,9 @@ def archive_images(folder_path, output_zip_path, delete_folder=False):
             logger.debug(f'Deleting original folder {folder_path}.')
             shutil.rmtree(folder_path)
             logger.info(f'Folder {folder_path} deleted.')
+        resp = True
     except Exception as e:
         logger.error(f'An error occurred during archiving or folder deletion: {e}')
-    return total_size_mb, image_count
+        total_size_mb, image_count = 0, 0
+        resp = False
+    return total_size_mb, image_count, resp
