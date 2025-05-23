@@ -30,6 +30,11 @@ class TimeLapse:
         self.current_date = datetime.now().strftime("%Y_%m_%d")
         self.is_running = False
 
+        if not os.path.exists(self.save_dir):
+            os.makedirs(self.save_dir)
+        if not os.path.exists(self.logs_dir):
+            os.makedirs(self.logs_dir)
+
         self.entries = self.__read_entries()
         self.unprocessed = self.__find_unprocessed_items(self.entries)
         if self.unprocessed:
@@ -40,11 +45,6 @@ class TimeLapse:
 
 
     async def start(self):
-        if not os.path.exists(self.save_dir):
-            os.makedirs(self.save_dir)
-        if not os.path.exists(self.logs_dir):
-            os.makedirs(self.logs_dir)
-
         self.is_running = True
 
         try:
