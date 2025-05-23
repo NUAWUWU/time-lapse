@@ -42,5 +42,7 @@ class Email:
                     server.login(self.sender_email, self.smtp_password)
                     server.sendmail(self.sender_email, receiver_email, msg.as_string())
                 logger.debug(f'Email sent to {receiver_email}.')
+            return True
         except Exception as e:
             logger.error(f'Failed to send email: {e}')
+            return False

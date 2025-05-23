@@ -4,8 +4,9 @@
         "FILE_LOG_LEVEL": "DEBUG",
         "LOG_DIR": "logs/",
         "SAVE_DIR": "images/",
-        "VIDEO_SRC": "http://192.168.0.233:8080/video",
+        "VIDEO_SRC": "http://192.168.1.233:8080/video",
         "DELAY_SEC": 5,
+        "DAYS_TO_KEEP_IMAGES": 7,
         "OUTPUT_IMG_SHAPE": null,
         "DETAILED_ERROR_REPORT": true
     },

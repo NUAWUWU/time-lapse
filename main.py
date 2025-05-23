@@ -31,7 +31,8 @@ if __name__ == "__main__":
                           save_dir=timelapse_config["SAVE_DIR"],
                           logs_dir=timelapse_config["LOG_DIR"],
                           output_img_shape=timelapse_config["OUTPUT_IMG_SHAPE"],
-                          delay_sec=timelapse_config["DELAY_SEC"]
+                          delay_sec=timelapse_config["DELAY_SEC"],
+                          days_to_keep=timelapse_config["DAYS_TO_KEEP_IMAGES"]
                           )
 
     try:

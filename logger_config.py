@@ -34,7 +34,7 @@ def setup_logger_from_config(console_level, file_level, log_dir):
     logger.add(sys.stdout, colorize=True, format=format_console, level=console_level)
 
     logger.add(
-        f"{log_dir}/log_{datetime.now().strftime('%Y_%m_%d')}.log",
+        f"{log_dir}/{{time:YYYY_MM_DD}}.log",
         format=format_file,
         level=file_level,
         rotation="00:00",
