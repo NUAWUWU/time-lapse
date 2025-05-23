@@ -40,10 +40,10 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         logger.critical('Shutdown initiated...')
         timelapse.stop()
-        u = input('Would you like to send a daily report for today? (Y/N) ')
-        if u.lower() == 'y':
-            logger.info('Send daily report initialized')
-            timelapse.send_daily_report()
+        # u = input('Would you like to send a daily report for today? (Y/N) ')
+        # if u.lower() == 'y':
+        #     logger.info('Send daily report initialized')
+        #     timelapse.send_daily_report()
         logger.critical('Shutdown complete.')
     except Exception as e:
         if timelapse_config['DETAILED_ERROR_REPORT']:

@@ -19,7 +19,7 @@ class Email:
         self.receiver_emails = receiver_emails
 
     def send_file(self, file_paths: list, subject: str, body: str):
-        logger.info(f'Sending {' '.join(file_paths)} email to {' '.join(self.receiver_emails)}.')
+        logger.info(f"Sending {' '.join(file_paths)} email to {' '.join(self.receiver_emails)}.")
         try:
             for receiver_email in self.receiver_emails:
                 msg = MIMEMultipart()

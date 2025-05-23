@@ -8,13 +8,14 @@ from logger_config import logger
 class VideoCaptureAsync:
     def __init__(self, src):
         self.src = src
-        self.cap = cv2.VideoCapture(self.src)
-        if not self.cap.isOpened():
-            raise RuntimeError(f"Cam {self.src} not found")
         self.frame = None
         self.stop_event = threading.Event()
         self.thread = None
 
+        self.cap = cv2.VideoCapture(self.src)
+        if not self.cap.isOpened():
+            raise RuntimeError(f"Cam {self.src} not found")
+        
     def start(self):
         if self.thread is None:
             self.thread = threading.Thread(target=self.update, args=())
