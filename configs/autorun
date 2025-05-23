@@ -1,0 +1,53 @@
+### Autorun
+
+sudo nano /etc/systemd/system/time_lapse.service
+
+[Unit]
+Description=TimeLapse
+After=network.target
+
+[Service]
+ExecStart=/home/raspberry/latime-lapsepse/.venv/bin/python /home/raspberry/time-lapse/main.py
+Restart=always
+RestartSec=30
+User=root
+WorkingDirectory=/home/raspberry/time-lapse
+
+[Install]
+WantedBy=multi-user.target
+
+
+1. Перезапуск конфигурации systemd
+sudo systemctl daemon-reload
+
+2. Включение службы
+sudo systemctl enable time_lapse.service
+
+3. Запуск службы
+sudo systemctl start time_lapse.service
+
+4. Проверка статуса службы
+sudo systemctl status time_lapse.service
+
+5. Остановка службы
+sudo systemctl stop time_lapse.service
+
+6. Отключение службы
+sudo systemctl disable time_lapse.service
+
+
+### Reboot
+sudo crontab -e
+
+0 0 * * * /sbin/reboot
+
+
+где (0 0 * * *) - время выполнения 00:00 (полночь) каждого дня месяца и недели
+
+В cron используется система расписания времени в формате
+минуты часы день_месяца месяц день_недели, где:
+    минуты — от 0 до 59
+    часы — от 0 до 23
+    день_месяца — от 1 до 31
+    месяц — от 1 до 12
+    день_недели — от 0 до 6 (где 0 — воскресенье)
