@@ -38,3 +38,22 @@ def archive_images(folder_path, output_zip_path, delete_folder=False):
         total_size_mb, image_count = 0, 0
         resp = False
     return total_size_mb, image_count, resp
+
+
+def split_zip_file(file_path, max_size_mb=24):
+    max_size_bytes = max_size_mb * 1024 * 1024
+    part_files = []
+
+    with open(file_path, 'rb') as f:
+        index = 1
+        while True:
+            chunk = f.read(max_size_bytes)
+            if not chunk:
+                break
+            part_file = f"{file_path}.part{index}"
+            with open(part_file, 'wb') as pf:
+                pf.write(chunk)
+            part_files.append(part_file)
+            index += 1
+
+    return part_files

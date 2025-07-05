@@ -28,6 +28,7 @@ if __name__ == "__main__":
 
     timelapse = TimeLapse(video_cap=video_cap,
                           email=email,
+                          max_size_mb=email_config["MAX_SIZE_MB"],
                           save_dir=timelapse_config["SAVE_DIR"],
                           logs_dir=timelapse_config["LOG_DIR"],
                           output_img_shape=timelapse_config["OUTPUT_IMG_SHAPE"],

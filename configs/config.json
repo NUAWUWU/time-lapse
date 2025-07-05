@@ -15,7 +15,8 @@
         "RECEIVER_EMAILS": [
             "oleg.sharovski@mail.ru"
         ],
-        "SMTP_PASSWORD": "FMLJc0DDK6WiY9ieh26L"
+        "SMTP_PASSWORD": "FMLJc0DDK6WiY9ieh26L",
+        "MAX_SIZE_MB": 24
     },
     "server_config": {
         "SERVER_PORT": 8000

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 from classes.Email import Email
 from classes.VideoCaptureAsync import VideoCaptureAsync
-from utils.archive import archive_images
+from utils.archive import archive_images, split_zip_file
 from logger_config import logger
 
 
@@ -14,6 +14,7 @@ class TimeLapse:
     def __init__(self,
                  video_cap: VideoCaptureAsync,
                  email: Email = None,
+                 max_size_mb=24,
                  save_dir='images/',
                  logs_dir='logs/',
                  output_img_shape=None,
@@ -21,6 +22,7 @@ class TimeLapse:
                  days_to_keep=7):
         self.video_cap = video_cap
         self.email = email
+        self.max_size_mb = max_size_mb
         self.save_dir = save_dir
         self.send_logfile = os.path.join(self.save_dir, 'send_logs.txt')
         self.logs_dir = logs_dir
@@ -164,7 +166,7 @@ class TimeLapse:
 
     async def __process_item(self, item):
         if item.endswith('.zip'):
-            total_size_mb =  os.path.getsize(item) / (1024 * 1024)
+            total_size_mb = os.path.getsize(item) / (1024 * 1024)
             image_count = '???'
             date = os.path.basename(item).split('.')[0]
             log_file_path = os.path.join(self.logs_dir, date + '.log')
@@ -172,29 +174,53 @@ class TimeLapse:
             date = os.path.basename(item)
             log_file_path = os.path.join(self.logs_dir, date + '.log')
             total_size_mb, image_count, resp = archive_images(item, item + '.zip', delete_folder=True)
-            if resp == False:
+            if not resp:
                 return
             item += '.zip'
 
         if not os.path.exists(log_file_path):
             logger.warning(f'Not found log file of {date}')
-            send_files = [item]
+            log_file = None
         else:
-            send_files = [item, log_file_path]
+            log_file = log_file_path
 
-        if self.email:
-            subject=f'Daily Capture Summary: {image_count} Images Archived ({total_size_mb:.2f} MB)'
-            body=f"""
-            Image capture for the date {date} has been successfully completed.
-            A total of {image_count} images, with a combined size of {total_size_mb:.2f} MB, have been archived and attached to this email.
-            Additionally, the log file for this day's activity is also attached. The log file contains detailed information about the capture process, including any errors or issues encountered.
+        if total_size_mb > self.max_size_mb:
+            part_files = split_zip_file(item, max_size_mb=self.max_size_mb)
 
-            Send by Automated System
-            """
+            if self.email:
+                for i, part_file in enumerate(part_files, start=1):
+                    subject = f"Part {i}/{len(part_files)}: Daily Capture {date}"
+                    body = (
+                        f"This is part {i} of {len(part_files)} of the archive for {date}.\n"
+                        f"Part size: {os.path.getsize(part_file) / (1024 * 1024):.2f} MB\n\n"
+                        f"Send by Automated System"
+                    )
+                    files_to_send = [part_file]
+                    if i == 1 and log_file:
+                        files_to_send.append(log_file)
 
-            resp = self.email.send_file(send_files, subject, body)
-            if resp == False:
-                return
+                    success = self.email.send_file(files_to_send, subject, body)
+                    if success:
+                        os.remove(part_file)
+                        logger.info(f"Sent and removed part {i}: {part_file}")
+                    else:
+                        logger.error(f"Failed to send part {i}: {part_file}")
+                        return
+
+        else:
+            files_to_send = [item]
+            if log_file:
+                files_to_send.append(log_file)
+            if self.email:
+                subject = f'Daily Capture Summary: {image_count} Images Archived ({total_size_mb:.2f} MB)'
+                body = (
+                    f"Image capture for {date} has been completed.\n"
+                    f"Total: {image_count} images, {total_size_mb:.2f} MB.\n"
+                    f"Log file is attached.\n\nSend by Automated System"
+                )
+                success = self.email.send_file(files_to_send, subject, body)
+                if not success:
+                    return
 
         with open(self.send_logfile, 'a') as file:
             file.write(f"{item}|{log_file_path}\n")
